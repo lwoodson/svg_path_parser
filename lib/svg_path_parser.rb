@@ -1,8 +1,9 @@
 require 'super_collections/array'
 
 module SvgPathParser
-  # TODO refactor into testable method.
-  to_points = lambda {|str| str.split(/[ ,]+/).map(&:to_f).tupelize}
+  def self.to_points(cmd_str)
+    cmd_str[1..-1].split(/[ ,]+/).select{|e| not e.empty?}.map(&:to_f).tupelize 
+  end
 
   def self.parse_boolean(numeric)
     if numeric.to_i == 0
@@ -13,24 +14,24 @@ module SvgPathParser
   end
 
   MoveStrategy = Proc.new do |parser, ctx, command_str|
-    dest = to_points.call(command_str[1..-1])[0]
+    dest = SvgPathParser.to_points(command_str)[0]
     parser.on_move.call(ctx, parser.current_pt, dest)
     dest
   end
 
   LineStrategy = Proc.new do |parser, ctx, command_str|
-    dest = to_points.call(command_str[1..-1])[0]
+    dest = SvgPathParser.to_points(command_str)[0]
     parser.on_line.call(ctx, parser.current_pt, dest)
     dest
   end
 
   CurveStrategy = Proc.new do |parser, ctx, command_str|
-    dest, c1, c2 = to_points.call(command_str[1..-1])
+    dest, c1, c2 = SvgPathParser.to_points(command_str)
     parser.on_curve.call(ctx, parser.current_pt, dest, c1, c2)
   end
 
   QuadraticStrategy = Proc.new do |parser, ctx, command_str|
-    dest, c = to_points.call(command_str[1..-1])
+    dest, c = SvgPathParser.to_points(command_str)
     parser.on_quadratic.call(ctx, parser.current_pt, dest, c)
   end
 
@@ -62,6 +63,9 @@ module SvgPathParser
   class Impl
     attr_reader :current_pt, :first_pt, :on_move, :on_line, :on_curve, :on_quadratic, :on_arc, :on_close
 
+    # Initialize the parser with callbacks for commands encountered
+    # sequentially within the path data.  All callbacks have default
+    # do nothing lambdas that allow you to only specify what you need.
     def initialize(opts={})
       @on_move = opts[:on_move] || lambda {|ctx, current, dest| }
       @on_line = opts[:on_line] || lambda {|ctx, current, dest| }
@@ -71,6 +75,9 @@ module SvgPathParser
       @on_close = opts[:on_close] || lambda {|ctx, current, first| }
     end
 
+    # Parse the path data within the given context.  The context can be
+    # used as a memo objects, ala inject, to craft a result from the
+    # parsing.
     def parse(ctx, path)
       tokenized_paths = path.scan /[MLCSQTHVZAmlcsqthvamlz][0-9. ,-]*/
       tokenized_paths.each do |token|
