@@ -1,7 +1,8 @@
 # Svg Path Parser
-This is an event-based parser for SVG path element data.  Each of the commands
-in a path string will generate a callback to a handler method specified at
-parser creation.
+This is an event-based parser for 
+[SVG path element data](https://developer.mozilla.org/en-US/docs/SVG/Tutorial/Paths).  
+Each of the commands in a path string will generate a callback to a handler 
+proc specified at parser creation.
 
 ## Usage
 ```ruby
@@ -64,6 +65,19 @@ parser = SvgPathParser::Impl.new :on_move => dupe_command,
 parser.parse("", "M5 5L10 10C15 15 0 0 20 20Q10 10 7 7A30 50 -45 1 1 30 30Z")
  => "M5 5L10 10L15.0 15.0L10.0 10.0L30.0 30.0Z"
 ```
+
+## Events
+The argument lists for the callbacks can be pretty large, so I extracted them 
+into events as follows:  
+
+```ruby
+DestinationEvent = Struct.new :command_str, :context, :current_pt, :dest_pt
+CurveEvent = Struct.new :command_str, :context, :current_pt, :dest_pt, :control_1, :control_2
+QuadraticEvent = Struct.new :command_str, :context, :current_pt, :dest_pt, :control
+ArcEvent = Struct.new :command_str, :context, :current_pt, :x_radius, :y_radius, :x_rotation, :large_arc, :sweep, :dest_pt
+CloseEvent = Struct.new :command_str, :context, :current_pt, :first_pt
+```
+DestinationEvent is used for both move and line commands.
 
 ## Issues
 * This currently does not support the horizontal/vertical (H/V) line shortcuts.
